@@ -277,12 +277,7 @@ class BotManager {
       this._log(id, `Bot error: ${err.message}`);
     });
 
-    // Explicitly handle keepalive packets to prevent timeout
-    bot._client.on('keep_alive', (packet) => {
-      try {
-        bot._client.write('keep_alive', { keepAliveId: packet.keepAliveId });
-      } catch (_) {}
-    });
+
 
     bot.on('end', (reason) => {
       this._log(id, `Disconnected: ${reason}`);
