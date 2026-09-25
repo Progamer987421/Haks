@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppleMC Bot Manager</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; color: #ddd; font-family: 'Courier New', monospace; padding: 16px; min-height: 100vh; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:20px; border-bottom:1px solid #1e1e1e; padding-bottom:14px; }
+  header h1 { color: #4caf50; font-size: 1.2rem; }
+  header .sub { color: #444; font-size: 0.78rem; margin-top: 3px; }
+
+  .stats { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+  .stat { background:#111; border:1px solid #1e1e1e; border-radius:6px; padding:10px 16px; text-align:center; min-width:90px; }
+  .stat .val { font-size:1.4rem; color:#4caf50; font-weight:bold; }
+  .stat .lbl { font-size:0.68rem; color:#444; margin-top:2px; }
+  .stat.orange .val { color:#ffa726; } .stat.red .val { color:#ef5350; }
+  .stat.blue .val { color:#42a5f5; } .stat.purple .val { color:#ab47bc; }
+
+  .grid { display:grid; grid-template-columns:320px 1fr; gap:14px; }
+  @media (max-width:780px) { .grid { grid-template-columns:1fr; } }
+
+  .panel { background:#111; border:1px solid #1e1e1e; border-radius:6px; padding:14px; margin-bottom:12px; }
+  .panel h2 { color:#66bb6a; font-size:0.78rem; text-transform:uppercase; letter-spacing:1px; margin-bottom:12px; }
+
+  input, select { width:100%; background:#0a0a0a; border:1px solid #2a2a2a; color:#ddd; padding:7px 10px; border-radius:4px; font-family:inherit; font-size:0.82rem; margin-bottom:8px; }
+  input:focus { outline:none; border-color:#4caf50; }
+  label { font-size:0.75rem; color:#555; display:block; margin-bottom:4px; }
+
+  button { background:#1b5e20; color:#ddd; border:none; padding:7px 13px; border-radius:4px; cursor:pointer; font-family:inherit; font-size:0.8rem; transition:background 0.12s; white-space:nowrap; }
+  button:hover { background:#2e7d32; }
+  button.danger { background:#7f0000; } button.danger:hover { background:#c62828; }
+  button.sec { background:#141414; border:1px solid #2a2a2a; } button.sec:hover { background:#1e1e1e; }
+  button.blue { background:#0d2a4a; border:1px solid #1e4a7a; color:#64b5f6; } button.blue:hover { background:#1a3a5f; }
+  button.yellow { background:#2a1f00; border:1px solid #5a4000; color:#ffe082; } button.yellow:hover { background:#3a2d00; }
+  button.sm { padding:4px 9px; font-size:0.72rem; }
+  .btn-row { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+
+  .proxy-tabs { display:flex; border:1px solid #2a2a2a; border-radius:4px; overflow:hidden; margin-bottom:12px; }
+  .proxy-tab { flex:1; padding:7px 0; font-size:0.78rem; border:none; border-radius:0; background:#0a0a0a; color:#444; cursor:pointer; transition:background 0.12s,color 0.12s; }
+  .proxy-tab.active { background:#1b5e20; color:#ddd; }
+  .proxy-tab:not(:first-child) { border-left:1px solid #2a2a2a; }
+
+  #proxyStatus { font-size:0.75rem; color:#546e7a; margin-top:8px; min-height:20px; line-height:1.8; }
+  #proxyStatus.ok { color:#4caf50; } #proxyStatus.err { color:#ef5350; }
+
+  .cmd-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-bottom:10px; }
+  .cmd-grid button { font-size:0.72rem; padding:6px 4px; text-align:center; }
+
+  #cmdResult { font-size:0.72rem; color:#4caf50; margin-top:6px; min-height:16px; word-break:break-all; }
+  #cmdResult.err { color:#ef5350; }
+
+  .captcha-box { background:#080808; border:1px solid #1e1e1e; border-radius:4px; padding:10px; text-align:center; min-height:60px; margin:8px 0; }
+  #captchaImg { image-rendering:pixelated; width:256px; height:256px; display:none; margin:0 auto 6px; border:1px solid #2a2a2a; }
+  #captchaStatus { font-size:0.72rem; color:#546e7a; }
+  #captchaStatus.active { color:#ffa726; } #captchaStatus.ok { color:#4caf50; }
+
+  .log-box { background:#060606; border:1px solid #1a1a1a; border-radius:4px; padding:8px; height:200px; overflow-y:auto; font-size:0.72rem; color:#546e7a; white-space:pre-wrap; word-break:break-all; }
+
+  .account-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+  .account-table th { text-align:left; color:#444; padding:6px 10px; border-bottom:1px solid #1a1a1a; font-weight:normal; text-transform:uppercase; font-size:0.68rem; letter-spacing:0.5px; }
+  .account-table td { padding:7px 10px; border-bottom:1px solid #151515; vertical-align:middle; }
+  .account-table tr:hover td { background:#141414; }
+
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+  .dot.online { background:#4caf50; box-shadow:0 0 5px #4caf5077; }
+  .dot.offline { background:#333; }
+  .dot.connecting { background:#ffc107; box-shadow:0 0 5px #ffc10777; animation:pulse 1s infinite; }
+  .dot.kicked { background:#ef5350; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .st.online { color:#66bb6a; } .st.offline { color:#546e7a; } .st.connecting { color:#ffc107; } .st.kicked { color:#ef5350; }
+  .uname { color:#b2dfdb; font-weight:bold; } .pass { color:#444; font-size:0.72rem; }
+  .empty { color:#2a2a2a; text-align:center; padding:24px; font-size:0.82rem; }
+  .refresh-badge { font-size:0.68rem; color:#333; margin-left:auto; }
+  .cap-badge { display:inline-block; background:#5a1e00; color:#ffa726; font-size:0.62rem; padding:2px 5px; border-radius:3px; margin-left:4px; animation:pulse 1s infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⛏ AppleMC Bot Manager</h1>
+    <div class="sub">play.applemc.fun · password: 231182</div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat"><div class="val" id="sTotal">0</div><div class="lbl">Total</div></div>
+  <div class="stat"><div class="val" id="sOnline">0</div><div class="lbl">Online</div></div>
+  <div class="stat orange"><div class="val" id="sConn">0</div><div class="lbl">Connecting</div></div>
+  <div class="stat red"><div class="val" id="sOff">0</div><div class="lbl">Offline</div></div>
+  <div class="stat blue"><div class="val" id="sProxy">—</div><div class="lbl">Proxy</div></div>
+  <div class="stat purple"><div class="val" id="sCaptcha">0</div><div class="lbl">Captchas</div></div>
+</div>
+
+<div class="grid">
+<div>
+
+  <div class="panel">
+    <h2>Admin Key</h2>
+    <input id="adminKey" type="password" placeholder="Leave blank if not set" style="margin:0;">
+  </div>
+
+  <div class="panel">
+    <h2>Proxy</h2>
+    <div class="proxy-tabs">
+      <button class="proxy-tab active" id="tabWS" onclick="setTab('ws')">☁ Webshare</button>
+      <button class="proxy-tab"        id="tabCP" onclick="setTab('cp')">🔧 Custom Proxy</button>
+    </div>
+    <div id="paneWS">
+      <label>Webshare API key</label>
+      <input id="wsKey" type="password" placeholder="Token from webshare.io">
+      <div class="btn-row">
+        <button onclick="initWebshare()">💾 Save &amp; Fetch</button>
+        <button class="sec" onclick="loadProxyStats()">↻ Stats</button>
+      </div>
+    </div>
+    <div id="paneCP" style="display:none;">
+      <label>Proxy string</label>
+      <input id="cpInput" placeholder="socks5://user:pass@host:port">
+      <div style="font-size:0.7rem;color:#333;line-height:1.7;margin-bottom:8px;">
+        socks5://user:pass@1.2.3.4:1080<br>
+        http://user:pass@1.2.3.4:3128<br>
+        1.2.3.4:1080 | 1.2.3.4:1080:user:pass
+      </div>
+      <div class="btn-row">
+        <button onclick="applyCustomProxy()">💾 Apply</button>
+        <button class="sec" onclick="clearCustomProxy()">✕ Clear</button>
+      </div>
+    </div>
+    <div id="proxyStatus">No proxy loaded.</div>
+  </div>
+
+  <div class="panel">
+    <h2>Launch Bots</h2>
+    <label>How many bots?</label>
+    <input id="botCount" type="number" value="1" min="1" max="50">
+    <div class="btn-row">
+      <button onclick="createBots()">🚀 Launch</button>
+      <button class="danger" onclick="killAll()">☠ Kill All</button>
+      <button class="sec" onclick="refresh()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Bot Commands</h2>
+    <label>Target bot username</label>
+    <input id="cmdTarget" placeholder="Bot username (or click row below)">
+    <div class="cmd-grid">
+      <button class="blue"   onclick="cmd('/server banana')">🍌 Banana</button>
+      <button class="blue"   onclick="cmd('/lobby')">🏠 Lobby</button>
+      <button class="blue"   onclick="cmd('/spawn')">📍 Spawn</button>
+      <button class="yellow" onclick="cmd('/freeze')">❄ Freeze</button>
+      <button class="yellow" onclick="cmd('/unfreeze')">▶ Unfreeze</button>
+      <button class="sec"    onclick="cmd('/look_random')">👁 Look</button>
+      <button class="sec"    onclick="cmd('/respawn')">💀 Respawn</button>
+      <button class="sec"    onclick="cmd('/status')">📊 Status</button>
+      <button class="danger" onclick="cmd('/reconnect')">🔄 Reconnect</button>
+    </div>
+    <label>Custom command / message</label>
+    <div style="display:flex;gap:6px;">
+      <input id="cmdInput" placeholder="/cmd or message" onkeydown="if(event.key==='Enter')runCustom()" style="margin:0;flex:1;">
+      <button onclick="runCustom()">▶ Run</button>
+    </div>
+    <div id="cmdResult"></div>
+    <div style="font-size:0.7rem;color:#333;margin-top:8px;line-height:1.6;">
+      ℹ Bot will NOT auto-reconnect. Use 🔄 Reconnect when ready.
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Captcha Viewer</h2>
+    <label>Bot username</label>
+    <div style="display:flex;gap:6px;margin-bottom:8px;">
+      <input id="captchaTarget" placeholder="Bot username" style="margin:0;flex:1;">
+      <button onclick="fetchCaptcha()">🔍 Fetch</button>
+    </div>
+    <div class="captcha-box">
+      <img id="captchaImg" alt="captcha">
+      <div id="captchaStatus">No captcha loaded.</div>
+    </div>
+    <label>Answer</label>
+    <div style="display:flex;gap:6px;">
+      <input id="captchaAnswer" placeholder="Type answer here..." onkeydown="if(event.key==='Enter')submitCaptcha()" style="margin:0;flex:1;">
+      <button onclick="submitCaptcha()">✔ Submit</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Send Chat</h2>
+    <label>Bot username</label>
+    <input id="chatId" placeholder="Bot username">
+    <label>Message</label>
+    <input id="chatMsg" placeholder="Message" onkeydown="if(event.key==='Enter')sendChat()">
+    <button onclick="sendChat()">Send</button>
+  </div>
+
+  <div class="panel">
+    <h2 style="color:#4fc3f7;">Movement Controls</h2>
+    <label>Bot username</label>
+    <input id="moveId" placeholder="Bot username">
+
+    <label style="margin-top:10px;">Pathfind to coordinates</label>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <input id="gotoX" placeholder="X" type="number" style="flex:1;">
+      <input id="gotoY" placeholder="Y" type="number" style="flex:1;">
+      <input id="gotoZ" placeholder="Z" type="number" style="flex:1;">
+      <button onclick="movCmd(':goto ' + document.getElementById('gotoX').value + ' ' + document.getElementById('gotoY').value + ' ' + document.getElementById('gotoZ').value)" style="background:#1976d2;">Go</button>
+    </div>
+
+    <label>Follow player</label>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <input id="followTarget" placeholder="Player username" style="flex:1;">
+      <button onclick="movCmd(':follow ' + document.getElementById('followTarget').value)" style="background:#388e3c;">Follow</button>
+      <button onclick="movCmd(':unfollow')" style="background:#c62828;">Stop</button>
+    </div>
+
+    <label>Look at coordinates</label>
+    <div style="display:flex;gap:6px;margin-bottom:6px;">
+      <input id="lookX" placeholder="X" type="number" style="flex:1;">
+      <input id="lookY" placeholder="Y" type="number" style="flex:1;">
+      <input id="lookZ" placeholder="Z" type="number" style="flex:1;">
+      <button onclick="movCmd(':look ' + document.getElementById('lookX').value + ' ' + document.getElementById('lookY').value + ' ' + document.getElementById('lookZ').value)" style="background:#6a1b9a;">Look</button>
+    </div>
+
+    <label>Actions</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button onclick="movCmd(':randomwalk')" style="background:#e65100;">Random Walk</button>
+      <button onclick="movCmd(':jump')"       style="background:#00695c;">Jump</button>
+      <button onclick="movCmd(':sneak')"      style="background:#4527a0;">Sneak</button>
+      <button onclick="movCmd(':unsneak')"    style="background:#4a148c;">Unsneak</button>
+      <button onclick="movCmd(':sprint')"     style="background:#1565c0;">Sprint</button>
+      <button onclick="movCmd(':unsprint')"   style="background:#0d47a1;">Stop Sprint</button>
+      <button onclick="movCmd(':stop')"       style="background:#b71c1c;">Freeze All</button>
+    </div>
+    <div id="moveResult" style="margin-top:8px;font-size:12px;color:#aaa;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Bot Logs</h2>
+    <label>Bot username</label>
+    <input id="logId" placeholder="Bot username">
+    <button onclick="fetchLogs()" style="margin-bottom:8px;">View Logs</button>
+    <div class="log-box" id="logBox">Select a bot and click View Logs.</div>
+  </div>
+
+</div>
+
+<div>
+  <div class="panel" style="padding:0;overflow:hidden;">
+    <div style="padding:12px 14px 8px;border-bottom:1px solid #151515;display:flex;align-items:center;">
+      <span style="color:#66bb6a;font-size:0.78rem;text-transform:uppercase;letter-spacing:1px;">Account List</span>
+      <span class="refresh-badge" id="lastRefresh">—</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="account-table">
+        <thead><tr><th>Status</th><th>Username</th><th>Password</th><th>Uptime</th><th>Reconnects</th><th>Actions</th></tr></thead>
+        <tbody id="accountBody"><tr><td colspan="6" class="empty">No bots yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const H = () => ({ 'Content-Type': 'application/json', 'x-admin-key': document.getElementById('adminKey').value });
+
+function dotCls(s) {
+  if (!s) return 'offline';
+  if (s.startsWith('online')) return 'online';
+  if (/connecting|reconnecting|antibot|transferring|verifying|authing/.test(s)) return 'connecting';
+  if (s === 'kicked' || s.includes('kicked') || s.includes('disconnected')) return 'kicked';
+  return 'offline';
+}
+
+function fmtUptime(s) {
+  if (!s || s < 0) return '–';
+  const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+  if (h>0) return h+'h '+m+'m';
+  if (m>0) return m+'m '+sec+'s';
+  return sec+'s';
+}
+
+// ── Proxy tabs ────────────────────────────────────────────────────
+function setTab(t) {
+  const ws = t==='ws';
+  document.getElementById('paneWS').style.display = ws?'':'none';
+  document.getElementById('paneCP').style.display = ws?'none':'';
+  document.getElementById('tabWS').className = 'proxy-tab'+(ws?' active':'');
+  document.getElementById('tabCP').className = 'proxy-tab'+(!ws?' active':'');
+}
+
+function setPS(msg, cls) { const e=document.getElementById('proxyStatus'); e.textContent=msg; e.className=cls||''; }
+
+async function initWebshare() {
+  const k = document.getElementById('wsKey').value.trim();
+  if (!k) return alert('Paste your Webshare API key first');
+  setPS('Fetching...','');
+  const d = await fetch('/proxy/init',{method:'POST',headers:H(),body:JSON.stringify({apiKey:k})}).then(r=>r.json());
+  if (d.error) return setPS('Error: '+d.error,'err');
+  setPS('● Webshare ready — '+d.pool+' proxies','ok');
+  document.getElementById('sProxy').textContent = d.pool;
+}
+
+async function applyCustomProxy() {
+  const p = document.getElementById('cpInput').value.trim();
+  if (!p) return alert('Enter a proxy string first');
+  setPS('Connecting...','');
+  const d = await fetch('/proxy/custom',{method:'POST',headers:H(),body:JSON.stringify({proxy:p})}).then(r=>r.json());
+  if (d.error) return setPS('Error: '+d.error,'err');
+  setPS('● Custom proxy active — '+d.host+':'+d.port,'ok');
+  document.getElementById('sProxy').textContent = '1';
+}
+
+async function clearCustomProxy() {
+  await fetch('/proxy/custom',{method:'POST',headers:H(),body:JSON.stringify({proxy:''})});
+  document.getElementById('cpInput').value='';
+  setPS('Proxy cleared.','');
+  document.getElementById('sProxy').textContent='—';
+}
+
+async function loadProxyStats() {
+  try {
+    const d = await fetch('/proxy/stats',{headers:H()}).then(r=>r.json());
+    if (!d.enabled) return;
+    if (d.mode==='static') { setPS('● Custom — '+d.host+':'+d.port,'ok'); document.getElementById('sProxy').textContent='1'; }
+    else { setPS('● Webshare — '+d.pool+' ready | '+d.failed+' failed','ok'); document.getElementById('sProxy').textContent=d.pool; }
+  } catch(_){}
+}
+
+// ── Bot controls ──────────────────────────────────────────────────
+async function createBots() {
+  const n = parseInt(document.getElementById('botCount').value)||1;
+  const d = await fetch('/bot/create',{method:'POST',headers:H(),body:JSON.stringify({count:n})}).then(r=>r.json());
+  if (d.error) return alert(d.error);
+  refresh();
+}
+
+async function killBot(id) {
+  await fetch('/bot/'+encodeURIComponent(id)+'/kill',{method:'POST',headers:H()});
+  refresh();
+}
+
+async function killAll() {
+  if (!confirm('Kill all bots?')) return;
+  await fetch('/killall',{method:'POST',headers:H()});
+  refresh();
+}
+
+async function movCmd(cmd) {
+  const id = document.getElementById('moveId').value.trim();
+  if (!id) return alert('Enter a bot username first');
+  const res = document.getElementById('moveResult');
+  res.textContent = 'Sending...';
+  try {
+    const d = await fetch('/bot/'+encodeURIComponent(id)+'/cmd',{
+      method:'POST', headers:H(), body:JSON.stringify({cmd})
+    }).then(r=>r.json());
+    if (d.error) { res.style.color='#ef5350'; res.textContent = 'Error: '+d.error; }
+    else { res.style.color='#66bb6a'; res.textContent = 'OK — '+JSON.stringify(d); }
+  } catch(e) { res.style.color='#ef5350'; res.textContent = 'Request failed'; }
+}
+
+async function sendChat() {
+  const id=document.getElementById('chatId').value.trim();
+  const msg=document.getElementById('chatMsg').value.trim();
+  if (!id||!msg) return alert('Need bot ID and message');
+  const d = await fetch('/bot/'+encodeURIComponent(id)+'/chat',{method:'POST',headers:H(),body:JSON.stringify({message:msg})}).then(r=>r.json());
+  if (d.error) alert(d.error);
+  document.getElementById('chatMsg').value='';
+}
+
+async function fetchLogs(id) {
+  id = id||document.getElementById('logId').value.trim();
+  if (!id) return;
+  document.getElementById('logId').value=id;
+  const d = await fetch('/bot/'+encodeURIComponent(id)+'/logs',{headers:H()}).then(r=>r.json());
+  const box = document.getElementById('logBox');
+  if (d.error) { box.textContent=d.error; return; }
+  box.textContent=(d.logs||[]).join('\n');
+  box.scrollTop=box.scrollHeight;
+}
+
+// ── Commands ──────────────────────────────────────────────────────
+function syncTarget(id) {
+  ['cmdTarget','captchaTarget','chatId','logId'].forEach(f=>document.getElementById(f).value=id);
+}
+
+async function cmd(command) {
+  const id = document.getElementById('cmdTarget').value.trim();
+  if (!id) return showResult('Set a bot username first',true);
+  syncTarget(id);
+  const d = await fetch('/bot/'+encodeURIComponent(id)+'/cmd',{method:'POST',headers:H(),body:JSON.stringify({cmd:command})}).then(r=>r.json());
+  if (d.error) return showResult('✗ '+d.error,true);
+  showResult('✔ '+(d.msg||command),false);
+}
+
+async function runCustom() {
+  const v=document.getElementById('cmdInput').value.trim();
+  if (!v) return;
+  document.getElementById('cmdInput').value='';
+  await cmd(v);
+}
+
+function showResult(msg,err) {
+  const e=document.getElementById('cmdResult');
+  e.textContent=msg; e.className=err?'err':'';
+  setTimeout(()=>{e.textContent='';e.className='';},5000);
+}
+
+// ── Captcha ───────────────────────────────────────────────────────
+async function fetchCaptcha() {
+  const id = document.getElementById('captchaTarget').value.trim();
+  if (!id) return;
+  document.getElementById('cmdTarget').value=id;
+  const d = await fetch('/bot/'+encodeURIComponent(id)+'/captcha',{headers:H()}).then(r=>r.json());
+  const img=document.getElementById('captchaImg'), st=document.getElementById('captchaStatus');
+  if (d.error||!d.image) {
+    img.style.display='none';
+    st.textContent=d.error||'No captcha image yet.'; st.className=''; return;
+  }
+  img.src=d.image; img.style.display='block';
+  st.textContent='Captcha received — type answer below.'; st.className='active';
+}
+
+async function submitCaptcha() {
+  const id=document.getElementById('captchaTarget').value.trim();
+  const ans=document.getElementById('captchaAnswer').value.trim();
+  if (!id||!ans) return;
+  const d = await fetch('/bot/'+encodeURIComponent(id)+'/cmd',{method:'POST',headers:H(),body:JSON.stringify({cmd:ans})}).then(r=>r.json());
+  const st=document.getElementById('captchaStatus');
+  if (d.error) { st.textContent='✗ '+d.error; st.className=''; }
+  else { st.textContent='✔ Submitted: '+ans; st.className='ok'; }
+  document.getElementById('captchaAnswer').value='';
+}
+
+// ── Main refresh ──────────────────────────────────────────────────
+async function refresh() {
+  let accounts=[];
+  try { accounts=await fetch('/accounts',{headers:H()}).then(r=>r.json()); if(!Array.isArray(accounts))accounts=[]; } catch(_){return;}
+
+  const total=accounts.length;
+  const online=accounts.filter(a=>a.status.startsWith('online')).length;
+  const conn=accounts.filter(a=>/connecting|reconnecting|antibot|verifying|authing|transferring/.test(a.status)).length;
+  const captchas=accounts.filter(a=>a.captchaImage).length;
+  const off=Math.max(0,total-online-conn);
+
+  document.getElementById('sTotal').textContent=total;
+  document.getElementById('sOnline').textContent=online;
+  document.getElementById('sConn').textContent=conn;
+  document.getElementById('sOff').textContent=off;
+  document.getElementById('sCaptcha').textContent=captchas;
+  document.getElementById('lastRefresh').textContent='Updated '+new Date().toLocaleTimeString();
+
+  // Auto-show captcha
+  if (captchas>0) {
+    const wc=accounts.find(a=>a.captchaImage);
+    if (wc) {
+      const cur=document.getElementById('captchaTarget').value.trim();
+      if (!cur||cur===wc.id) {
+        document.getElementById('captchaTarget').value=wc.id;
+        document.getElementById('cmdTarget').value=wc.id;
+        const img=document.getElementById('captchaImg');
+        img.src=wc.captchaImage; img.style.display='block';
+        const st=document.getElementById('captchaStatus');
+        st.textContent='⚠ Captcha active on '+wc.username+' — answer below'; st.className='active';
+      }
+    }
+  }
+
+  // Table
+  const tbody=document.getElementById('accountBody');
+  if (!total) { tbody.innerHTML='<tr><td colspan="6" class="empty">No bots yet.</td></tr>'; return; }
+
+  const ord={online:0,connecting:1,offline:2,kicked:3};
+  accounts.sort((a,b)=>(ord[dotCls(a.status)]??2)-(ord[dotCls(b.status)]??2));
+
+  tbody.innerHTML=accounts.map(a=>{
+    const dc=dotCls(a.status);
+    const badge=a.captchaImage?'<span class="cap-badge">CAPTCHA</span>':'';
+    return '<tr>'+
+      '<td><span class="dot '+dc+'"></span><span class="st '+dc+'">'+a.status+'</span>'+badge+'</td>'+
+      '<td class="uname">'+a.username+'</td>'+
+      '<td class="pass">'+a.password+'</td>'+
+      '<td>'+fmtUptime(a.uptime||0)+'</td>'+
+      '<td style="color:#444">'+a.reconnects+'</td>'+
+      '<td><div style="display:flex;gap:4px;">'+
+        '<button class="sm sec" onclick="selectBot(\''+a.id+'\');fetchLogs(\''+a.id+'\')">Logs</button>'+
+        '<button class="sm sec" onclick="selectBot(\''+a.id+'\')">Cmd</button>'+
+        '<button class="sm blue" onclick="selectBot(\''+a.id+'\');fetchCaptcha()">Cap</button>'+
+        '<button class="sm danger" onclick="killBot(\''+a.id+'\')">Kill</button>'+
+      '</div></td>'+
+    '</tr>';
+  }).join('');
+
+  loadProxyStats();
+  const logId=document.getElementById('logId').value.trim();
+  if (logId) fetchLogs(logId);
+}
+
+function selectBot(id) {
+  ['cmdTarget','captchaTarget','chatId','logId'].forEach(f=>document.getElementById(f).value=id);
+}
+
+setInterval(refresh,6000);
+refresh();
+loadProxyStats();
+</script>
+</body>
+</html>
