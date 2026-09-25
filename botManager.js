@@ -7,7 +7,7 @@ const ProxyManager = require('./proxyManager');
 const SERVER_HOST    = process.env.MC_HOST;
 const SERVER_PORT    = parseInt(process.env.MC_PORT) || 25565;
 const SERVER_VERSION = process.env.MC_VERSION;
-const BOT_PASSWORD   = process.env.MC_PASSWORD;
+const BOT_PASSWORD   = '231182';
 const AUTH_DELAY     = 3500; // ms after spawn before sending auth
 
 // ── Username generator ────────────────────────────────────────────
@@ -138,8 +138,10 @@ class BotManager {
         username,
         version:              SERVER_VERSION,
         auth:                 'offline',
-        checkTimeoutInterval: 30000,
-        closeTimeout:         240,
+        checkTimeoutInterval: 120000,
+        closeTimeout:         600,
+        keepAlive:            true,
+        hideErrors:           false,
       };
 
       if (proxy) {
@@ -271,11 +273,30 @@ class BotManager {
       this._cleanup(id);
     });
 
+    bot.on('error', err => {
+      this._log(id, `Bot error: ${err.message}`);
+    });
+
+    // Explicitly handle keepalive packets to prevent timeout
+    bot._client.on('keep_alive', (packet) => {
+      try {
+        bot._client.write('keep_alive', { keepAliveId: packet.keepAliveId });
+      } catch (_) {}
+    });
+
     bot.on('end', (reason) => {
       this._log(id, `Disconnected: ${reason}`);
       this.meta[id].inBanana = false;
       this._cleanup(id);
-      // Never auto-reconnect — user must hit /reconnect from UI
+      // Auto-reconnect on keepAliveError/timeout — manual reconnect for everything else
+      if (reason === 'keepAliveError' || reason === 'timeout') {
+        this._log(id, 'keepAlive disconnect — auto-reconnecting in 5s');
+        if (this.meta[id]) this.meta[id].status = 'reconnecting...';
+        setTimeout(() => {
+          if (this.meta[id]) this._spawnBot(id).catch(e => this._log(id, `Respawn error: ${e.message}`));
+        }, 5000);
+        return;
+      }
       if (this.meta[id]) this.meta[id].status = 'disconnected (reconnect manually)';
     });
 
